@@ -4,7 +4,7 @@
   Copyright (c) Microsoft Corporation
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
-#include <gtest/gtest.h>
+#include <Library/GoogleTestLib.h>
 
 extern "C" {
   #include <Uefi.h>
@@ -161,7 +161,7 @@ TEST_F (Dhcp6AppendOptionTest, ValidDataExpectSuccess) {
   Packet->Length = sizeof (EFI_DHCP6_HEADER);
   OriginalLength = Packet->Length;
 
-  UntrustedDuid = (EFI_DHCP6_DUID *)AllocateZeroPool (sizeof (EFI_DHCP6_DUID));
+  UntrustedDuid = (EFI_DHCP6_DUID *)AllocateZeroPool (OFFSET_OF (EFI_DHCP6_DUID, Duid) + sizeof (Duid));
   ASSERT_NE (UntrustedDuid, (EFI_DHCP6_DUID *)NULL);
 
   UntrustedDuid->Length = NTOHS (sizeof (Duid));
@@ -763,7 +763,7 @@ TEST_F (Dhcp6SeekStsOptionTest, SeekIATAOptionExpectFail) {
              Dhcp6SeekStsOptionTest::Packet,
              &Option,
              Dhcp6OptStatusCode,
-             SearchPatternLength,
+             HTONS (SearchPatternLength),
              (UINT8 *)&SearchPattern
              );
   ASSERT_EQ (Status, EFI_SUCCESS);
@@ -815,7 +815,7 @@ TEST_F (Dhcp6SeekStsOptionTest, SeekIANAOptionExpectSuccess) {
              Dhcp6SeekStsOptionTest::Packet,
              &Option,
              Dhcp6OptStatusCode,
-             SearchPatternLength,
+             HTONS (SearchPatternLength),
              (UINT8 *)&SearchPattern
              );
   ASSERT_EQ (Status, EFI_SUCCESS);

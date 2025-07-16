@@ -11,7 +11,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #ifndef __GNUC__
+#define RUNTIME_FUNCTION  _WINNT_DUP_RUNTIME_FUNCTION
 #include <windows.h>
+#undef RUNTIME_FUNCTION
 #include <io.h>
 #endif
 #include <assert.h>
@@ -1396,6 +1398,18 @@ WriteSections64 (
             SymName = (const UINT8 *)"<unknown>";
           }
 
+          if (mEhdr->e_machine == EM_X86_64) {
+            //
+            // For x86_64, we can ignore R_X86_64_NONE relocations.
+            // They are used to indicate that the symbol is not defined
+            // in the current module, but in a shared library that may be
+            // used when building modules for inclusion in host-based unit tests.
+            //
+            if (ELF_R_TYPE(Rel->r_info) == R_X86_64_NONE) {
+              continue;
+            }
+          }
+
           //
           // Skip error on EM_RISCV64 and EM_LOONGARCH because no symbol name is built
           // from RISC-V and LoongArch toolchain.
@@ -1482,9 +1496,18 @@ WriteSections64 (
               - (SecOffset - SecShdr->sh_addr));
             VerboseMsg ("Relocation:  0x%08X", *(UINT32 *)Targ);
             break;
+          case R_X86_64_REX_GOTPCRELX:
+            //
+            // This is a relaxable GOTPCREL relocation, and the linker may have
+            // applied this relaxation without updating the relocation type.
+            // In the position independent code model, only transformations
+            // from MOV to LEA are possible for REX-prefixed instructions.
+            //
+            if (Targ[-2] == 0x8d) { // LEA
+              break;
+            }
           case R_X86_64_GOTPCREL:
           case R_X86_64_GOTPCRELX:
-          case R_X86_64_REX_GOTPCRELX:
             VerboseMsg ("R_X86_64_GOTPCREL family");
             VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X",
               (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)),
